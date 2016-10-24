@@ -267,23 +267,40 @@ class Custom_Javascript_Editor {
 			wp_enqueue_style( 'cje-code-mirror-css', plugins_url( '/codemirror/codemirror.css', __FILE__ ) );
 			$theme_css = "/codemirror/{$this->selected_editor_style}.css";
 			
-            wp_enqueue_script( 'jetpack-css-fullscreen', plugins_url( 'js/fullscreen.js', __FILE__ ), array( 'jquery', 'underscore'), '20131009', true );
-            wp_enqueue_script( 'jetpack-css-xmls', plugins_url( 'js/xml.js', __FILE__ ), array( 'jquery', 'underscore' ), '20131009', true );
-            wp_enqueue_script( 'jetpack-css-dialog', plugins_url( 'js/dialog.js', __FILE__ ), array( 'jquery', 'underscore' ), '20131009', true );
-            wp_enqueue_script( 'jetpack-css-searchcursor', plugins_url( 'js/searchcursor.js', __FILE__ ), array( 'jquery', 'underscore'), '20131009', true );
+            wp_enqueue_script( 'jetpack-css-fullscreen', plugins_url( 'js/fullscreen.js', __FILE__ ), array( 'jquery', 'underscore','cje-code-mirror-js'), '20131009', true );
+            wp_enqueue_script( 'jetpack-css-xmls', plugins_url( 'js/xml.js', __FILE__ ), array( 'jquery', 'underscore','cje-code-mirror-js' ), '20131009', true );
+            wp_enqueue_script( 'jetpack-css-dialog', plugins_url( 'js/dialog.js', __FILE__ ), array( 'jquery', 'underscore','cje-code-mirror-js' ), '20131009', true );
+            wp_enqueue_script( 'jetpack-css-searchcursor', plugins_url( 'js/searchcursor.js', __FILE__ ), array( 'jquery', 'underscore','cje-code-mirror-js'), '20131009', true );
             wp_enqueue_script( 'jetpack-css-search', plugins_url( 'js/search.js', __FILE__ ), array( 'jquery', 'underscore' ), '20131009', true );
-            wp_enqueue_script( 'jetpack-css-annotatescrollbar', plugins_url( 'js/annotatescrollbar.js', __FILE__ ), array( 'jquery', 'underscore' ), '20131009', true );   
-            wp_enqueue_script( 'jetpack-css-matchesonscrollbar', plugins_url( 'js/matchesonscrollbar.js', __FILE__ ), array( 'jquery', 'underscore' ), '20131009', true );   
-            wp_enqueue_script( 'jetpack-css-jump-to-line', plugins_url( 'js/jump-to-line.js', __FILE__ ), array( 'jquery', 'underscore'), '20131009', true );                           
+            wp_enqueue_script( 'jetpack-css-annotatescrollbar', plugins_url( 'js/annotatescrollbar.js', __FILE__ ), array( 'jquery', 'underscore','cje-code-mirror-js' ), '20131009', true );   
+            wp_enqueue_script( 'jetpack-css-matchesonscrollbar', plugins_url( 'js/matchesonscrollbar.js', __FILE__ ), array( 'jquery', 'underscore','cje-code-mirror-js' ), '20131009', true );   
+            wp_enqueue_script( 'jetpack-css-jump-to-line', plugins_url( 'js/jump-to-line.js', __FILE__ ), array( 'jquery', 'underscore','cje-code-mirror-js'), '20131009', true );                           
             
             
             wp_enqueue_style( 'cje-code-mirror-theme-css', plugins_url( $theme_css, __FILE__ ) );
             wp_enqueue_style( 'custom-js-styles', plugins_url( 'css/js-editor.css', __FILE__ ) );
-            wp_enqueue_style( 'jetpack-css-use-codemirrordialog', plugins_url( 'css/dialog.css', __FILE__ ), array( 'jetpack-css-codemirror' ), '20120905' );
-            wp_enqueue_style( 'jetpack-css-use-codemirrormatchesonscrollbar', plugins_url( 'css/matchesonscrollbar.css', __FILE__ ), array( 'jetpack-css-codemirror' ), '20120905' );
+            wp_enqueue_style( 'jetpack-css-use-codemirrordialog', plugins_url( 'css/dialog.css', __FILE__ ));
+            wp_enqueue_style( 'jetpack-css-use-codemirrormatchesonscrollbar', plugins_url( 'css/matchesonscrollbar.css', __FILE__ ));
 			wp_enqueue_script( 'jslint', plugins_url( '/jslint/jslint.js', __FILE__ ) );
 			wp_enqueue_script( 'initui', plugins_url( '/jslint/initui.js', __FILE__ ), array( 'jquery', 'jslint' ) );
 		}
+	}
+    
+    function help_meta_box() {
+        ?>
+<dl>
+      <dt>Ctrl-S / Cmd-S</dt><dd>Save without leaving page.</dd>
+      <dt>Esc</dt><dd>Fullscreen enter/exit</dd>
+      <dt>Ctrl-F / Cmd-F</dt><dd>Start searching</dd>
+      <dt>Ctrl-G / Cmd-G</dt><dd>Find next</dd>
+      <dt>Shift-Ctrl-G / Shift-Cmd-G</dt><dd>Find previous</dd>
+      <dt>Shift-Ctrl-F / Cmd-Option-F</dt><dd>Replace</dd>
+      <dt>Shift-Ctrl-R / Shift-Cmd-Option-F</dt><dd>Replace all</dd>
+      <dt>Alt-F</dt><dd>Persistent search (dialog doesn't autoclose,
+      enter to find next, Shift-Enter to find previous)</dd>
+      <dt>Alt-G / Cmd-L</dt><dd>Jump to line</dd>
+    </dl>
+        <?php
 	}
 
 	function javascript_editor() {
@@ -309,6 +326,8 @@ class Custom_Javascript_Editor {
 					<h3 style="margin: 0;"><?php esc_html_e( 'Load also:', 'custom-javascript-editor' ); ?></h3><br />
 						<?php $this->scripts_selector(); ?>
 						<p>jQuery and the complete <a href="https://jqueryui.com/">jQuery UI</a> library are already included on all front end page views.</p>
+                        <?php add_meta_box( 'helpdiv', __( 'Help', 'jetpack' ), array( __CLASS__, 'help_meta_box' ), 'custom-javascript', 'side' ); 
+				        do_meta_boxes( 'custom-javascript', 'side', '' ); ?>
 					</div>
 				</div>
 				<div style="clear:both;"></div>
@@ -322,7 +341,7 @@ class Custom_Javascript_Editor {
 			<div id="poststuff" style="clear:both;" class="metabox-holder<?php echo 2 == $screen_layout_columns ? ' has-right-sidebar' : ''; ?>">
 			<?php
 				add_meta_box( 'revisionsdiv', __( 'JavaScript Revisions', 'custom-javascript-editor' ), array( $this, 'revisions_meta_box' ), 'custom-javascript', 'normal' );
-				do_action( 'add_meta_boxes', self::POST_TYPE, $this->get_js_post() );
+                do_action( 'add_meta_boxes', self::POST_TYPE, $this->get_js_post() );
 				do_action( 'add_meta_boxes_' . self::POST_TYPE, $this->get_js_post() );
 
 				do_meta_boxes( self::POST_TYPE, 'normal', $this->get_js_post() );
@@ -346,6 +365,7 @@ class Custom_Javascript_Editor {
 			echo ' />&nbsp;&nbsp;' . $script['name'] . '</label><br />';
 		}
 	}
+    
 
     function ajax_custom_js_handle_save(){
         check_ajax_referer( 'custom_js', 'security' );

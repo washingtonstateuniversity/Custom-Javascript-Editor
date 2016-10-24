@@ -14,11 +14,11 @@
 				type:'POST',
 				data:frm.serialize()+"&update=Update&security="+ajax_object.ajax_nonce+"&action=ajax_custom_js_handle_save",
 				success: function(data){ 
-                    jQuery("#message").html("<p><strong>Stylesheet saved.</strong></p>");
+                    jQuery("#message").html("<p><strong>Javascript saved.</strong></p>");
                     jQuery("#message").delay(1000).fadeOut();
                 },
 				error: function(data){ 
-                    jQuery("#message").html("<p><strong>There was an error saving.  Try using the 'Save Stylesheet' button.</strong></p>");
+                    jQuery("#message").html("<p><strong>There was an error saving.  Try using the 'Update' button.</strong></p>");
                     jQuery("#message").addClass("error");
                 }
 			});

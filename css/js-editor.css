@@ -2,6 +2,8 @@
 	margin-bottom: 20px;
 }
 
+.postbox { min-width: auto; }
+
 .CodeMirror{
     margin-bottom: 15px;
 }
