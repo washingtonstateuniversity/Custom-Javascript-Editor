@@ -24,6 +24,7 @@
 			});
 		},
 		init: function() {
+            postboxes.add_postbox_toggles( 'custom-javascript' );
 			this.$textarea = $( '#cje-javascript' );
 			this.editor = window.CodeMirror.fromTextArea( this.$textarea.get(0),{
 				mode: 'javascript',

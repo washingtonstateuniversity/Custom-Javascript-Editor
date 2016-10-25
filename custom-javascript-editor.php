@@ -261,6 +261,7 @@ class Custom_Javascript_Editor {
 
 	function admin_scripts_and_styles() {
 		if ( isset( $_REQUEST['page'] ) && self::PAGE_SLUG == $_REQUEST['page'] ) {
+            wp_enqueue_script( 'postbox' );
 			wp_enqueue_script( 'customcss-js', plugins_url( '/libraries/custom-javascript.js', __FILE__ ) );
 			wp_enqueue_script( 'cje-code-mirror-js', plugins_url( '/codemirror/codemirror.js', __FILE__ ) , array('jquery','underscore'));
             wp_enqueue_script( 'cje-code-mirror-js-support-js', plugins_url( '/codemirror/javascript.js', __FILE__ ) );
@@ -312,26 +313,29 @@ class Custom_Javascript_Editor {
 			<form id="jsform" style="margin-top: 10px;" method="POST">
 				<div style="width: 100%">
 				<?php wp_nonce_field( 'custom-javascript-editor', 'custom-javascript-editor' ) ?>
-				<div id="cje-js-container" style="width: 80%; float: left; ">
+				<div id="cje-js-container" style="width: 75%; float: left; ">
 				<textarea id="cje-javascript" name="javascript"  style="width: 100%; "><?php
 					if ( $this->get_js() )
 						echo esc_textarea( html_entity_decode( wp_kses_decode_entities( $this->get_js() ) ) );
 				?></textarea>
+                    <?php submit_button( __( 'Update', 'custom-javascript-editor' ), 'primary', 'update', false, array( 'accesskey' => 's' ) ); ?>
+				
 				<script>
 					var theme = '<?php echo esc_js( $this->selected_editor_style ); ?>';
 				</script>
 				 </div>
-				<div id="cje-frameworks-container" style="float: right; width: 20%; ">
+				<div id="cje-frameworks-container" style="float: right; width: 25%; ">
 					<div style="padding-left: 20px">
 					<h3 style="margin: 0;"><?php esc_html_e( 'Load also:', 'custom-javascript-editor' ); ?></h3><br />
 						<?php $this->scripts_selector(); ?>
 						<p>jQuery and the complete <a href="https://jqueryui.com/">jQuery UI</a> library are already included on all front end page views.</p>
+                        <div id="poststuff">
                         <?php add_meta_box( 'helpdiv', __( 'Help', 'jetpack' ), array( __CLASS__, 'help_meta_box' ), 'custom-javascript', 'side' ); 
 				        do_meta_boxes( 'custom-javascript', 'side', '' ); ?>
+                        </div>
 					</div>
 				</div>
 				<div style="clear:both;"></div>
-				<?php submit_button( __( 'Update', 'custom-javascript-editor' ), 'primary', 'update', false, array( 'accesskey' => 's' ) ); ?>
 				</div>
 			</form>
 			<div id="jslint_errors">
