@@ -121,9 +121,10 @@ class Custom_Javascript_Editor {
 			'post_status' => 'publish',
 		);
 
-		if ( $post = array_shift( get_posts( $args ) ) )
+		$posts = get_posts( $args );
+		if ( $post = array_shift( $posts ) )
 			return get_object_vars( $post );
-		
+
 		return false;
 	}
 
