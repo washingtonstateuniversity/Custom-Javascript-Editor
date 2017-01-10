@@ -48,6 +48,7 @@ class Custom_Javascript_Editor {
 		add_action( 'admin_init', array( $this, 'handle_form' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'action_wp_enqueue_scripts' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'admin_scripts_and_styles' ) );
+		add_action( 'wp_ajax_ajax_custom_js_handle_save', array( $this, 'ajax_custom_js_handle_save' ) );
 
 		// Show an updated message if things have been updated
 		if ( isset( $_REQUEST['page'], $_REQUEST['message'] ) && self::PAGE_SLUG == $_REQUEST['page'] && 'updated' == $_REQUEST['message'] )
@@ -105,8 +106,15 @@ class Custom_Javascript_Editor {
 				'rewrite' => false,
 			);
 		register_post_type( self::POST_TYPE, $args );
+        
+        $params = array(
+		  'ajaxurl' => admin_url('admin-ajax.php'),
+		  'ajax_nonce' => wp_create_nonce('custom_js')
+		);
+		wp_enqueue_script('jquery');
+		wp_localize_script( 'jquery', 'ajax_object', $params );
 	}
-
+    
 	function get_js() {
 		if( !$post = $this->get_js_post() )
 			return false;
@@ -254,15 +262,47 @@ class Custom_Javascript_Editor {
 
 	function admin_scripts_and_styles() {
 		if ( isset( $_REQUEST['page'] ) && self::PAGE_SLUG == $_REQUEST['page'] ) {
-			wp_enqueue_script( 'cje-code-mirror-js', plugins_url( '/codemirror/codemirror.js', __FILE__ ) );
-			wp_enqueue_script( 'cje-code-mirror-js-support-js', plugins_url( '/codemirror/javascript.js', __FILE__ ) );
+            wp_enqueue_script( 'postbox' );
+			wp_enqueue_script( 'customcss-js', plugins_url( '/libraries/custom-javascript.js', __FILE__ ) );
+			wp_enqueue_script( 'cje-code-mirror-js', plugins_url( '/codemirror/codemirror.js', __FILE__ ) , array('jquery','underscore'));
+            wp_enqueue_script( 'cje-code-mirror-js-support-js', plugins_url( '/codemirror/javascript.js', __FILE__ ) );
 			wp_enqueue_style( 'cje-code-mirror-css', plugins_url( '/codemirror/codemirror.css', __FILE__ ) );
 			$theme_css = "/codemirror/{$this->selected_editor_style}.css";
-			wp_enqueue_style( 'cje-code-mirror-theme-css', plugins_url( $theme_css, __FILE__ ) );
-
+			
+            wp_enqueue_script( 'jetpack-css-fullscreen', plugins_url( 'js/fullscreen.js', __FILE__ ), array( 'jquery', 'underscore','cje-code-mirror-js'), '20131009', true );
+            wp_enqueue_script( 'jetpack-css-xmls', plugins_url( 'js/xml.js', __FILE__ ), array( 'jquery', 'underscore','cje-code-mirror-js' ), '20131009', true );
+            wp_enqueue_script( 'jetpack-css-dialog', plugins_url( 'js/dialog.js', __FILE__ ), array( 'jquery', 'underscore','cje-code-mirror-js' ), '20131009', true );
+            wp_enqueue_script( 'jetpack-css-searchcursor', plugins_url( 'js/searchcursor.js', __FILE__ ), array( 'jquery', 'underscore','cje-code-mirror-js'), '20131009', true );
+            wp_enqueue_script( 'jetpack-css-search', plugins_url( 'js/search.js', __FILE__ ), array( 'jquery', 'underscore' ), '20131009', true );
+            wp_enqueue_script( 'jetpack-css-annotatescrollbar', plugins_url( 'js/annotatescrollbar.js', __FILE__ ), array( 'jquery', 'underscore','cje-code-mirror-js' ), '20131009', true );   
+            wp_enqueue_script( 'jetpack-css-matchesonscrollbar', plugins_url( 'js/matchesonscrollbar.js', __FILE__ ), array( 'jquery', 'underscore','cje-code-mirror-js' ), '20131009', true );   
+            wp_enqueue_script( 'jetpack-css-jump-to-line', plugins_url( 'js/jump-to-line.js', __FILE__ ), array( 'jquery', 'underscore','cje-code-mirror-js'), '20131009', true );                           
+            
+            
+            wp_enqueue_style( 'cje-code-mirror-theme-css', plugins_url( $theme_css, __FILE__ ) );
+            wp_enqueue_style( 'custom-js-styles', plugins_url( 'css/js-editor.css', __FILE__ ) );
+            wp_enqueue_style( 'jetpack-css-use-codemirrordialog', plugins_url( 'css/dialog.css', __FILE__ ));
+            wp_enqueue_style( 'jetpack-css-use-codemirrormatchesonscrollbar', plugins_url( 'css/matchesonscrollbar.css', __FILE__ ));
 			wp_enqueue_script( 'jslint', plugins_url( '/jslint/jslint.js', __FILE__ ) );
 			wp_enqueue_script( 'initui', plugins_url( '/jslint/initui.js', __FILE__ ), array( 'jquery', 'jslint' ) );
 		}
+	}
+    
+    function help_meta_box() {
+        ?>
+<dl>
+      <dt>Ctrl-S / Cmd-S</dt><dd>Save without leaving page.</dd>
+      <dt>Esc</dt><dd>Fullscreen enter/exit</dd>
+      <dt>Ctrl-F / Cmd-F</dt><dd>Start searching</dd>
+      <dt>Ctrl-G / Cmd-G</dt><dd>Find next</dd>
+      <dt>Shift-Ctrl-G / Shift-Cmd-G</dt><dd>Find previous</dd>
+      <dt>Shift-Ctrl-F / Cmd-Option-F</dt><dd>Replace</dd>
+      <dt>Shift-Ctrl-R / Shift-Cmd-Option-F</dt><dd>Replace all</dd>
+      <dt>Alt-F</dt><dd>Persistent search (dialog doesn't autoclose,
+      enter to find next, Shift-Enter to find previous)</dd>
+      <dt>Alt-G / Cmd-L</dt><dd>Jump to line</dd>
+    </dl>
+        <?php
 	}
 
 	function javascript_editor() {
@@ -271,33 +311,32 @@ class Custom_Javascript_Editor {
 		<div class="wrap">
 			<?php screen_icon(); ?>
 			<h2><?php esc_html_e( 'Custom JavaScript Editor', 'custom-javascript-editor' ); ?></h2>
-			<form style="margin-top: 10px;" method="POST">
+			<form id="jsform" style="margin-top: 10px;" method="POST">
 				<div style="width: 100%">
 				<?php wp_nonce_field( 'custom-javascript-editor', 'custom-javascript-editor' ) ?>
-				<div id="cje-js-container" style="width: 80%; float: left;">
-				<textarea id="cje-javascript" name="javascript" rows=20 style="width: 100%"><?php
+				<div id="cje-js-container" style="width: 75%; float: left; ">
+				<textarea id="cje-javascript" name="javascript"  style="width: 100%; "><?php
 					if ( $this->get_js() )
 						echo esc_textarea( html_entity_decode( wp_kses_decode_entities( $this->get_js() ) ) );
 				?></textarea>
+                    <?php submit_button( __( 'Update', 'custom-javascript-editor' ), 'primary', 'update', false, array( 'accesskey' => 's' ) ); ?>
+				
 				<script>
-					var CJECodeMirrorOptions = {
-						theme:        '<?php echo esc_js( $this->selected_editor_style ); ?>',
-						indentUnit:   4,
-						lineWrapping: true,
-						lineNumbers:  true,
-					}
-					var CJECodeMirror = CodeMirror.fromTextArea(document.getElementById('cje-javascript'), CJECodeMirrorOptions);
+					var theme = '<?php echo esc_js( $this->selected_editor_style ); ?>';
 				</script>
 				 </div>
-				<div id="cje-frameworks-container" style="float: right; width: 20%; height: 350px;">
+				<div id="cje-frameworks-container" style="float: right; width: 25%; ">
 					<div style="padding-left: 20px">
 					<h3 style="margin: 0;"><?php esc_html_e( 'Load also:', 'custom-javascript-editor' ); ?></h3><br />
 						<?php $this->scripts_selector(); ?>
 						<p>jQuery and the complete <a href="https://jqueryui.com/">jQuery UI</a> library are already included on all front end page views.</p>
+                        <div id="poststuff">
+                        <?php add_meta_box( 'helpdiv', __( 'Help', 'jetpack' ), array( __CLASS__, 'help_meta_box' ), 'custom-javascript', 'side' ); 
+				        do_meta_boxes( 'custom-javascript', 'side', '' ); ?>
+                        </div>
 					</div>
 				</div>
 				<div style="clear:both;"></div>
-				<?php submit_button( __( 'Update', 'custom-javascript-editor' ), 'primary', 'update', false, array( 'accesskey' => 's' ) ); ?>
 				</div>
 			</form>
 			<div id="jslint_errors">
@@ -307,7 +346,7 @@ class Custom_Javascript_Editor {
 			<div id="poststuff" style="clear:both;" class="metabox-holder<?php echo 2 == $screen_layout_columns ? ' has-right-sidebar' : ''; ?>">
 			<?php
 				add_meta_box( 'revisionsdiv', __( 'JavaScript Revisions', 'custom-javascript-editor' ), array( $this, 'revisions_meta_box' ), 'custom-javascript', 'normal' );
-				do_action( 'add_meta_boxes', self::POST_TYPE, $this->get_js_post() );
+                do_action( 'add_meta_boxes', self::POST_TYPE, $this->get_js_post() );
 				do_action( 'add_meta_boxes_' . self::POST_TYPE, $this->get_js_post() );
 
 				do_meta_boxes( self::POST_TYPE, 'normal', $this->get_js_post() );
@@ -331,31 +370,14 @@ class Custom_Javascript_Editor {
 			echo ' />&nbsp;&nbsp;' . $script['name'] . '</label><br />';
 		}
 	}
+    
 
-	function handle_form() {
-
-		if ( !isset( $_REQUEST['page'] ) || self::PAGE_SLUG != $_REQUEST['page'] )
-			return;
-
-		if ( ! current_user_can( $this->capability ) )
-			wp_die( __( "Whoops, you don't have permission to do that.", 'custom-javascript-editor' ) );
-
-		// A request to change the JS editor style
-		if ( ! empty( $_REQUEST['screen-options-apply'] ) ) {
-			check_admin_referer( 'screen-options-nonce', 'screenoptionnonce' );
-
-			update_user_meta( get_current_user_id(), $this->editor_style_option, sanitize_key( $_REQUEST['cje-editor-style'] ) );
-
-			wp_safe_redirect( add_query_arg( 'page', self::PAGE_SLUG, admin_url( 'themes.php' ) ) );
-			exit;
-		}
-
-		// We aren't saving....
-		if ( ! isset( $_REQUEST['javascript'] ) )
-			return;
-
-		check_admin_referer( 'custom-javascript-editor', 'custom-javascript-editor' );
-
+    function ajax_custom_js_handle_save(){
+        check_ajax_referer( 'custom_js', 'security' );
+		$this->save_action();
+    }
+    
+    function save_action() {
 		//process
 		$js = $_REQUEST['javascript'];
 		// The $js variable is explicitly not sanitized, as we allow Javascript
@@ -372,8 +394,33 @@ class Custom_Javascript_Editor {
 		} else {
 			delete_option( self::enqueue_option );
 		}
+    }
+    
+	function handle_form() {
+        if ( !isset( $_REQUEST['page'] ) || self::PAGE_SLUG != $_REQUEST['page'] )
+			return;
+        
+		if ( ! current_user_can( $this->capability ) )
+			wp_die( __( "Whoops, you don't have permission to do that.", 'custom-javascript-editor' ) );
 
-		$query_args = array(
+		// A request to change the JS editor style
+		if ( ! empty( $_REQUEST['screen-options-apply'] ) ) {
+			check_admin_referer( 'screen-options-nonce', 'screenoptionnonce' );
+
+			update_user_meta( get_current_user_id(), $this->editor_style_option, sanitize_key( $_REQUEST['cje-editor-style'] ) );
+
+			wp_safe_redirect( add_query_arg( 'page', self::PAGE_SLUG, admin_url( 'themes.php' ) ) );
+			exit;
+		}
+
+		// We aren't saving....
+		if ( ! isset( $_REQUEST['javascript'] ) )
+			return;
+        
+        check_admin_referer( 'custom-javascript-editor', 'custom-javascript-editor' );
+        
+        $this->save_action();
+        $query_args = array(
 				'page'       => self::PAGE_SLUG,
 				'message'    => 'updated',
 			);
